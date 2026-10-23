@@ -6,21 +6,30 @@ namespace Noelo\Monitor\Reporting;
 
 use Noelo\Monitor\Http\HttpClientInterface;
 use Noelo\Monitor\Http\HttpTransportException;
+use Noelo\Monitor\OrderFeed\Dto\OrderDto;
 use Noelo\Monitor\Rules\PaymentReminderRule;
 
 /**
- * Automaticky posle zakaznikovi pripomienku nezaplatenia: zavola adresu shopu
- * (rovnaku, ako tlacidlo "odoslat info o nezaplateni" v jeho administracii),
- * ktora mail odosle.
+ * Posle zakaznikovi pripomienku nezaplatenia: zavola adresu shopu (rovnaku, ako
+ * tlacidlo "odoslat info o nezaplateni" v jeho administracii), ktora mail odosle.
+ *
+ * Pouziva sa dvoma sposobmi:
+ *   - automaticky pri dennej kontrole (`run`, rezim live / dry-run),
+ *   - rucne tlacidlom v dashboarde (`sendManually`) - mail odide az po kliknuti.
  *
  * Bezpecnostne poistky (posiela sa realnym zakaznikom):
  *   - kazdej objednavke najviac raz (viz PaymentReminderLogRepository),
  *   - nikdy ak je k objednavke platba na overenie/potvrdena z banky,
- *   - maximalny pocet mailov za jeden beh,
+ *   - maximalny pocet mailov za jeden automaticky beh,
  *   - rezim dry-run len vypise, komu by sa poslalo.
  */
 final class PaymentReminderStep
 {
+    public const OUTCOME_SENT = 'sent';
+    public const OUTCOME_FAILED = 'failed';
+    public const OUTCOME_UNKNOWN = 'unknown';
+    public const OUTCOME_NOT_DUE = 'not-due';
+
     /**
      * @param string $urlTemplate adresa shopu, `{id}` sa nahradi ID objednavky pre shop
      * @param string $shopIdPrefix prefix, ktory sa z cisla objednavky odstrani, aby vzniklo ID pre shop
@@ -45,18 +54,7 @@ final class PaymentReminderStep
 
     public function run(int $checkRunId, \DateTimeImmutable $now): PaymentReminderSummary
     {
-        $blocked = array_flip(array_merge(
-            $this->log->findHandledOrderIds(),
-            $this->paymentMatchRepository->findOrderIdsWithPendingOrConfirmedMatch(),
-        ));
-
-        $due = [];
-        foreach ($this->orderRepository->findUnpaidNonCashOnDeliveryOrders() as $order) {
-            if (isset($blocked[$order->id]) || !$this->rule->matches($order, $now)) {
-                continue;
-            }
-            $due[] = $order->id;
-        }
+        $due = array_map(static fn (OrderDto $o) => $o->id, $this->findDueOrders($now));
 
         $skippedOverLimit = max(0, count($due) - $this->maxPerRun);
         $due = array_slice($due, 0, $this->maxPerRun);
@@ -68,7 +66,7 @@ final class PaymentReminderStep
         $sent = [];
         $failed = [];
         foreach ($due as $orderId) {
-            if ($this->send($checkRunId, $orderId, $now)) {
+            if ($this->send($checkRunId, $orderId, $now) === self::OUTCOME_SENT) {
                 $sent[] = $orderId;
             } else {
                 $failed[] = $orderId;
@@ -78,16 +76,64 @@ final class PaymentReminderStep
         return new PaymentReminderSummary(false, sentOrderIds: $sent, failedOrderIds: $failed, skippedOverLimit: $skippedOverLimit);
     }
 
-    private function send(int $checkRunId, int $orderId, \DateTimeImmutable $now): bool
+    /**
+     * Rucne odoslanie jednej pripomienky z dashboardu. Znova overi, ze objednavka
+     * este skutocne caka na pripomienku (nezaplatena, nie je platba na overenie,
+     * este sa neposielalo) - nedovoli poslat mail komukolvek podvrhnutym ID.
+     *
+     * @return string jedna z OUTCOME_* konstant
+     */
+    public function sendManually(int $orderId, \DateTimeImmutable $now): string
+    {
+        $isDue = false;
+        foreach ($this->findDueOrders($now) as $order) {
+            if ($order->id === $orderId) {
+                $isDue = true;
+                break;
+            }
+        }
+        if (!$isDue) {
+            return self::OUTCOME_NOT_DUE;
+        }
+
+        return $this->send(null, $orderId, $now);
+    }
+
+    /** Administrator sa rozhodol pripomienku neposielat - objednavka sa uz nebude ponukat. */
+    public function skip(int $orderId, \DateTimeImmutable $now): void
+    {
+        $this->log->markSkipped($orderId, $now);
+    }
+
+    /** @return OrderDto[] */
+    private function findDueOrders(\DateTimeImmutable $now): array
+    {
+        $blocked = array_flip(array_merge(
+            $this->log->findHandledOrderIds(),
+            $this->paymentMatchRepository->findOrderIdsWithPendingOrConfirmedMatch(),
+        ));
+
+        $due = [];
+        foreach ($this->orderRepository->findUnpaidNonCashOnDeliveryOrders() as $order) {
+            if (!isset($blocked[$order->id]) && $this->rule->matches($order, $now)) {
+                $due[] = $order;
+            }
+        }
+
+        return $due;
+    }
+
+    /** @param ?int $checkRunId null = rucne odoslanie (chyba sa ukaze v dashboarde, nie v feed_errors) */
+    private function send(?int $checkRunId, int $orderId, \DateTimeImmutable $now): string
     {
         $shopId = $this->shopIdFor($orderId);
         if ($shopId === null) {
-            $this->feedErrors->record($checkRunId, 'payment_reminder', "Pripomienka objednavky #{$orderId}: cislo nezodpoveda ocakavanemu formatu, neposlana.");
-            return false;
+            $this->recordError($checkRunId, "Pripomienka objednavky #{$orderId}: cislo nezodpoveda ocakavanemu formatu, neposlana.");
+            return self::OUTCOME_FAILED;
         }
 
         if (!$this->log->claim($orderId, $now)) {
-            return false;
+            return self::OUTCOME_NOT_DUE;
         }
 
         try {
@@ -100,8 +146,8 @@ final class PaymentReminderStep
         } catch (HttpTransportException) {
             // Pozadovanie mohlo dojst na server aj ked odpoved neprisla - radsej neposielame znova.
             $this->log->markUnknown($orderId);
-            $this->feedErrors->record($checkRunId, 'payment_reminder', "Pripomienka objednavky #{$orderId}: spojenie so shopom zlyhalo, nezname ci mail odisiel (neopakuje sa automaticky).");
-            return false;
+            $this->recordError($checkRunId, "Pripomienka objednavky #{$orderId}: spojenie so shopom zlyhalo, nezname ci mail odisiel (neopakuje sa automaticky).");
+            return self::OUTCOME_UNKNOWN;
         }
 
         if ($response->statusCode >= 200 && $response->statusCode < 300) {
@@ -109,17 +155,24 @@ final class PaymentReminderStep
             // Samotne HTTP 200 nestaci - aj prihlasovacia/chybova stranka moze vratit 200.
             if (!str_contains($response->body, (string) $orderId)) {
                 $this->log->markUnknown($orderId);
-                $this->feedErrors->record($checkRunId, 'payment_reminder', "Pripomienka objednavky #{$orderId}: odpoved shopu neobsahuje cislo objednavky, nezname ci mail odisiel (skontroluj prihlasenie/adresu).");
-                return false;
+                $this->recordError($checkRunId, "Pripomienka objednavky #{$orderId}: odpoved shopu neobsahuje cislo objednavky, nezname ci mail odisiel (skontroluj prihlasenie/adresu).");
+                return self::OUTCOME_UNKNOWN;
             }
 
             $this->log->markSent($orderId, $response->statusCode, $now);
-            return true;
+            return self::OUTCOME_SENT;
         }
 
         $this->log->markFailed($orderId, $response->statusCode);
-        $this->feedErrors->record($checkRunId, 'payment_reminder', "Pripomienka objednavky #{$orderId}: shop odpovedal HTTP {$response->statusCode}.");
-        return false;
+        $this->recordError($checkRunId, "Pripomienka objednavky #{$orderId}: shop odpovedal HTTP {$response->statusCode}.");
+        return self::OUTCOME_FAILED;
+    }
+
+    private function recordError(?int $checkRunId, string $message): void
+    {
+        if ($checkRunId !== null) {
+            $this->feedErrors->record($checkRunId, 'payment_reminder', $message);
+        }
     }
 
     private function shopIdFor(int $orderId): ?string

@@ -21,9 +21,6 @@ use Noelo\Monitor\Reporting\FeedErrorRepository;
 use Noelo\Monitor\Reporting\OrderRepository;
 use Noelo\Monitor\Reporting\PaymentMatchingService;
 use Noelo\Monitor\Reporting\PaymentMatchRepository;
-use Noelo\Monitor\Reporting\PaymentReminderLogRepository;
-use Noelo\Monitor\Reporting\PaymentReminderStep;
-use Noelo\Monitor\Rules\PaymentReminderRule;
 use PDO;
 
 /**
@@ -86,22 +83,11 @@ final class DailyCheckRunnerFactory
         // Automaticke pripomienky nezaplatenia posielaju maily realnym zakaznikom, preto su
         // predvolene vypnute: PAYMENT_REMINDER_MODE = off (default) | dry-run | live.
         $reminderMode = $env->get('PAYMENT_REMINDER_MODE', 'off');
-        $reminderUrl = $env->get('PAYMENT_REMINDER_URL');
-        $paymentReminderStep = ($reminderUrl === null || !in_array($reminderMode, ['dry-run', 'live'], true)) ? null : new PaymentReminderStep(
-            httpClient: new CurlHttpClient(),
-            orderRepository: new OrderRepository($pdo),
-            paymentMatchRepository: new PaymentMatchRepository($pdo),
-            log: new PaymentReminderLogRepository($pdo),
-            rule: new PaymentReminderRule(),
-            feedErrors: $feedErrors,
-            urlTemplate: $reminderUrl,
-            dryRun: $reminderMode !== 'live',
-            shopIdPrefix: $env->get('PAYMENT_REMINDER_ID_PREFIX', '3014'),
-            maxPerRun: $env->getInt('PAYMENT_REMINDER_MAX_PER_RUN', 20),
-            timeoutSeconds: $env->getInt('PAYMENT_REMINDER_TIMEOUT_SECONDS', 20),
-            basicAuthUsername: $env->get('PAYMENT_REMINDER_BASIC_USERNAME'),
-            basicAuthPassword: $env->get('PAYMENT_REMINDER_BASIC_PASSWORD'),
-        );
+        // Tlacidla "Poslat mail" v dashboarde funguju vzdy, ked je PAYMENT_REMINDER_URL nastavene,
+        // bez ohladu na tento rezim - ten urcuje len automaticke odosielanie pri dennej kontrole.
+        $paymentReminderStep = !in_array($reminderMode, ['dry-run', 'live'], true)
+            ? null
+            : PaymentReminderStepFactory::create($env, $pdo, dryRun: $reminderMode !== 'live');
 
         return new DailyCheckRunner($checkRuns, $orderFeedStep, $fioStep, $paymentMatchingService, $reportSender, $paymentReminderStep);
     }

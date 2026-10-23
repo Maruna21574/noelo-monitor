@@ -39,6 +39,7 @@ use Noelo\Monitor\Http\Controllers\LogoutController;
 use Noelo\Monitor\Http\Controllers\HelpController;
 use Noelo\Monitor\Http\Controllers\OrderFeedPreviewController;
 use Noelo\Monitor\Http\Controllers\PaymentReviewController;
+use Noelo\Monitor\Http\Controllers\ReminderActionController;
 use Noelo\Monitor\Http\Controllers\RunCheckController;
 use Noelo\Monitor\Http\Controllers\SendReportController;
 
@@ -76,6 +77,11 @@ if ($page === 'payment-review' && $method === 'POST') {
 
 if ($page === 'dismiss-conflict' && $method === 'POST') {
     (new ConflictDismissController($pdo))->handle($_POST, $_SESSION, $auth);
+    exit;
+}
+
+if ($page === 'reminder-action' && $method === 'POST') {
+    (new ReminderActionController($pdo, $env))->handle($_POST, $_SESSION);
     exit;
 }
 

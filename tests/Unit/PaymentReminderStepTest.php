@@ -173,6 +173,35 @@ final class PaymentReminderStepTest extends DatabaseTestCase
         self::assertSame('unknown', $this->statusOf(3014000011));
     }
 
+    public function testManualSendSendsOnlyDueOrderAndOnlyOnce(): void
+    {
+        $this->insertOrder(3014238270, '2026-10-17 10:00:00');
+        $this->insertOrder(3014000012, '2026-10-22 10:00:00'); // len 1 den - nie je na rade
+
+        $step = $this->step(new HttpResponse(200, 'ok'));
+
+        self::assertSame(PaymentReminderStep::OUTCOME_NOT_DUE, $step->sendManually(3014000012, $this->now()));
+        self::assertSame(PaymentReminderStep::OUTCOME_NOT_DUE, $step->sendManually(999, $this->now()));
+        self::assertSame([], $this->calledUrls);
+
+        self::assertSame(PaymentReminderStep::OUTCOME_SENT, $step->sendManually(3014238270, $this->now()));
+        self::assertSame(PaymentReminderStep::OUTCOME_NOT_DUE, $step->sendManually(3014238270, $this->now()));
+        self::assertCount(1, $this->calledUrls);
+    }
+
+    public function testSkippedOrderIsNeverSentAutomaticallyOrManually(): void
+    {
+        $this->insertOrder(3014000013, '2026-10-17 10:00:00');
+
+        $step = $this->step(new HttpResponse(200, 'ok'));
+        $step->skip(3014000013, $this->now());
+
+        self::assertSame(PaymentReminderStep::OUTCOME_NOT_DUE, $step->sendManually(3014000013, $this->now()));
+        self::assertSame([], $step->run($this->checkRunId(), $this->now())->sentOrderIds);
+        self::assertSame([], $this->calledUrls);
+        self::assertSame('skipped', $this->statusOf(3014000013));
+    }
+
     public function testMaxPerRunLimitsSentMails(): void
     {
         $this->insertOrder(3014000009, '2026-10-17 10:00:00');

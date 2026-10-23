@@ -5,6 +5,9 @@
 /** @var array<int, array<string, mixed>> $reportHistory */
 /** @var array<int, array<string, mixed>> $recentReminders */
 /** @var string $reminderMode off|dry-run|live */
+/** @var array<int, string> $reminderStatuses order_id => stav z payment_reminders_sent */
+/** @var array<int, int> $reviewOrderIds objednavky s platbou na overenie (kluce) */
+/** @var bool $reminderConfigured */
 /** @var string $csrfToken */
 /** @var string|null $username */
 
@@ -67,6 +70,21 @@ $navItems = [
 </div>
 
 <main class="wrap">
+
+    <?php $reminderFlash = (string) ($_GET['reminder'] ?? ''); ?>
+    <?php if ($reminderFlash === 'sent'): ?>
+        <p class="flash">Pripomienka bola odoslaná zákazníkovi.</p>
+    <?php elseif ($reminderFlash === 'skipped'): ?>
+        <p class="flash">Pripomienka sa nebude posielať.</p>
+    <?php elseif ($reminderFlash === 'failed'): ?>
+        <p class="flash flash-error">Odoslanie pripomienky zlyhalo (shop odpovedal chybou). Môžeš to skúsiť znova.</p>
+    <?php elseif ($reminderFlash === 'unknown'): ?>
+        <p class="flash flash-error">Nie je jasné, či mail odišiel – skontroluj to ručne a pre istotu ho neposielaj znova.</p>
+    <?php elseif ($reminderFlash === 'not-due'): ?>
+        <p class="flash flash-error">Túto objednávku už nie je možné poslať (už sa riešila, je zaplatená alebo má platbu na overenie).</p>
+    <?php elseif ($reminderFlash === 'not-configured'): ?>
+        <p class="flash flash-error">Odosielanie pripomienok nie je nastavené (PAYMENT_REMINDER_URL v .env).</p>
+    <?php endif; ?>
 
     <?php if (isset($_GET['ran'])): ?>
         <p class="flash">Kontrola bola manuálne spustená.</p>
@@ -268,11 +286,48 @@ $navItems = [
 
     <div class="card" id="sec-reminders">
         <h2>Pripomenutie úhrady (nezaplatené 5+ dní)</h2>
-        <p class="section-desc">Objednávky s platbou vopred, ktoré 5 a viac dní čakajú na zaplatenie. Zoznam objednávok čakajúcich na pripomienku; ak je zapnuté automatické odosielanie, appka im pripomienku pošle sama (viď nižšie).</p>
+        <p class="section-desc">Objednávky s platbou vopred, ktoré 5 a viac dní čakajú na zaplatenie. Objednávky čakajúce na pripomienku. Mail zákazníkovi odíde až keď klikneš na „Poslať mail“; „Neposielať“ objednávku zo zoznamu odstráni.</p>
         <?php if ($report->paymentReminders === []): ?>
             <p class="empty">(žiadne)</p>
         <?php else: ?>
-            <p><?= implode(', ', array_map(static fn ($o) => Html::e($o->createdAt->format('Y-m-d')) . ' #' . Html::e((string) $o->id), $report->paymentReminders)) ?></p>
+            <table>
+                <tr><th>Dátum objednávky</th><th>Objednávka</th><th>Zákazník</th><th>Suma</th><th>Akcia</th></tr>
+                <?php foreach ($report->paymentReminders as $reminderOrder): ?>
+                    <?php $reminderStatus = $reminderStatuses[$reminderOrder->id] ?? null; ?>
+                    <tr>
+                        <td><?= Html::e($reminderOrder->createdAt->format('Y-m-d')) ?></td>
+                        <td>#<?= Html::e((string) $reminderOrder->id) ?></td>
+                        <td><?= Html::e($reminderOrder->deliveryName) ?></td>
+                        <td><?= Html::e(Money::toDecimalString($reminderOrder->totalPriceCents)) ?> EUR</td>
+                        <td>
+                            <?php if ($reminderStatus === 'sent'): ?>
+                                <span class="pill pill-green">mail odoslaný</span>
+                            <?php elseif ($reminderStatus === 'skipped'): ?>
+                                <span class="pill pill-muted">neposielať (preskočené)</span>
+                            <?php elseif ($reminderStatus === 'unknown' || $reminderStatus === 'pending'): ?>
+                                <span class="pill pill-muted">neznáme, či mail odišiel – skontroluj ručne</span>
+                            <?php elseif (isset($reviewOrderIds[$reminderOrder->id])): ?>
+                                <span class="pill pill-muted">platba na overenie – mail sa neposiela</span>
+                            <?php elseif (!$reminderConfigured): ?>
+                                <span class="pill pill-muted">odosielanie nie je nastavené (.env)</span>
+                            <?php else: ?>
+                                <form class="inline" method="post" action="?page=reminder-action" onsubmit="return confirm('Naozaj poslať zákazníkovi pripomienku nezaplatenia k objednávke #<?= Html::e((string) $reminderOrder->id) ?>?');">
+                                    <input type="hidden" name="csrf_token" value="<?= Html::e($csrfToken) ?>">
+                                    <input type="hidden" name="order_id" value="<?= Html::e((string) $reminderOrder->id) ?>">
+                                    <input type="hidden" name="action" value="send">
+                                    <button type="submit" class="btn-confirm"><?= $reminderStatus === 'failed' ? 'Skúsiť znova' : 'Poslať mail' ?></button>
+                                </form>
+                                <form class="inline" method="post" action="?page=reminder-action">
+                                    <input type="hidden" name="csrf_token" value="<?= Html::e($csrfToken) ?>">
+                                    <input type="hidden" name="order_id" value="<?= Html::e((string) $reminderOrder->id) ?>">
+                                    <input type="hidden" name="action" value="skip">
+                                    <button type="submit" class="btn-reject">Neposielať</button>
+                                </form>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
         <?php endif; ?>
     </div>
 
@@ -285,8 +340,8 @@ $navItems = [
                 <td>
                     <?= match ($reminderMode) {
                         'live' => '<span class="pill pill-green">ZAPNUTÉ – maily odchádzajú zákazníkom</span>',
-                        'dry-run' => '<span class="pill pill-muted">SKÚŠOBNÝ REŽIM – nič sa neposiela (zoznam vypíše cron do konzoly)</span>',
-                        default => '<span class="pill pill-muted">VYPNUTÉ</span>',
+                        'dry-run' => '<span class="pill pill-muted">SKÚŠOBNÝ REŽIM – nič sa neposiela automaticky (zoznam vypíše cron do konzoly)</span>',
+                        default => '<span class="pill pill-muted">AUTOMATICKY VYPNUTÉ – maily posielaš ručne tlačidlom pri objednávke</span>',
                     } ?>
                 </td>
             </tr>
@@ -303,6 +358,7 @@ $navItems = [
                             'sent' => 'odoslané',
                             'failed' => 'zlyhalo (skúsi sa znova)',
                             'unknown' => 'neznáme – skontroluj ručne',
+                            'skipped' => 'preskočené (neposielať)',
                             default => 'prebieha',
                         }) ?></td>
                         <td><?= Html::e((string) $reminder['attempted_at']) ?></td>

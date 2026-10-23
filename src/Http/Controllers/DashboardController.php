@@ -31,6 +31,11 @@ final class DashboardController
 
         $pendingPayments = (new PaymentMatchRepository($this->pdo))->findPendingReviewForAdmin();
         $recentReminders = (new PaymentReminderLogRepository($this->pdo))->findRecent();
+        $reminderStatuses = (new PaymentReminderLogRepository($this->pdo))->statusesFor(
+            array_map(static fn ($o) => $o->id, $report->paymentReminders)
+        );
+        $reviewOrderIds = array_flip((new PaymentMatchRepository($this->pdo))->findOrderIdsWithPendingOrConfirmedMatch());
+        $reminderConfigured = $this->env->get('PAYMENT_REMINDER_URL') !== null;
         $reminderMode = $this->env->get('PAYMENT_REMINDER_URL') === null
             ? 'off'
             : (string) $this->env->get('PAYMENT_REMINDER_MODE', 'off');

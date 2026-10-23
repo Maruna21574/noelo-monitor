@@ -69,6 +69,38 @@ final class PaymentReminderLogRepository
         $this->update($orderId, 'unknown', null, null);
     }
 
+    /** Administrator sa rozhodol pripomienku neposlat. */
+    public function markSkipped(int $orderId, \DateTimeImmutable $now): void
+    {
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO payment_reminders_sent (order_id, status, attempted_at) VALUES (:id, 'skipped', :at)
+             ON DUPLICATE KEY UPDATE status = IF(status IN ('sent', 'pending', 'unknown'), status, 'skipped'), attempted_at = VALUES(attempted_at)"
+        );
+        $stmt->execute(['id' => $orderId, 'at' => $now->format('Y-m-d H:i:s')]);
+    }
+
+    /**
+     * @param int[] $orderIds
+     * @return array<int, string> order_id => status
+     */
+    public function statusesFor(array $orderIds): array
+    {
+        if ($orderIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
+        $stmt = $this->pdo->prepare("SELECT order_id, status FROM payment_reminders_sent WHERE order_id IN ({$placeholders})");
+        $stmt->execute(array_values($orderIds));
+
+        $result = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $result[(int) $row['order_id']] = $row['status'];
+        }
+
+        return $result;
+    }
+
     /** @return array<int, array{order_id: string, status: string, attempted_at: string}> */
     public function findRecent(int $limit = 10): array
     {
