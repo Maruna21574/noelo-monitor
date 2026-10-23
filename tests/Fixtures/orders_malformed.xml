@@ -1,0 +1,19 @@
+<orders>
+    <order>
+        <id>3014234999</id>
+        <created>2026-09-17 12:36:11</created>
+        <status>spracováva sa</status>
+        <deliveryName>Nedokoncena Objednavka</deliveryName>
+        <email>broken@example.com</email>
+        <totalPrice>10.00</totalPrice>
+        <deliveryType>Kuriér - vopred</deliveryType>
+        <deliveryPrice>0.00</deliveryPrice>
+        <payed>10.00</payed>
+        <orderedItems>
+            <orderedItem>
+                <id>1000001</id>
+                <idProduct>111</idProduct>
+                <title>Nieco</title>
+                <count>1</count>
+                <price>10.00</price>
+</orders>

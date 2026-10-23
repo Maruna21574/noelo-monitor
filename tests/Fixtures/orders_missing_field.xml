@@ -1,0 +1,46 @@
+<orders>
+    <order>
+        <id>3014235000</id>
+        <created>2026-09-17 12:00:00</created>
+        <status>spracováva sa</status>
+        <deliveryName>Platna Objednavka</deliveryName>
+        <email>ok@example.com</email>
+        <totalPrice>20.00</totalPrice>
+        <deliveryType>Kuriér - vopred</deliveryType>
+        <deliveryPrice>0.00</deliveryPrice>
+        <payed>20.00</payed>
+        <orderedItems>
+            <orderedItem>
+                <id>2000001</id>
+                <idProduct>222</idProduct>
+                <title>Produkt</title>
+                <count>1</count>
+                <price>20.00</price>
+                <deliveryInfo>skladom</deliveryInfo>
+                <supplier>For Baby</supplier>
+            </orderedItem>
+        </orderedItems>
+    </order>
+    <order>
+        <id></id>
+        <created>2026-09-17 12:05:00</created>
+        <status>spracováva sa</status>
+        <deliveryName>Neplatna Objednavka</deliveryName>
+        <email>bad@example.com</email>
+        <totalPrice>15.00</totalPrice>
+        <deliveryType>Kuriér - vopred</deliveryType>
+        <deliveryPrice>0.00</deliveryPrice>
+        <payed>15.00</payed>
+        <orderedItems>
+            <orderedItem>
+                <id>2000002</id>
+                <idProduct>333</idProduct>
+                <title>Produkt2</title>
+                <count>1</count>
+                <price>15.00</price>
+                <deliveryInfo>skladom</deliveryInfo>
+                <supplier>For Baby</supplier>
+            </orderedItem>
+        </orderedItems>
+    </order>
+</orders>

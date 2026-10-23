@@ -1,0 +1,8 @@
+[
+    {"productCode": "40561", "quantityInStock": 12, "quantityReserved": 2, "soldOut": false, "expectedDeliveryDate": null},
+    {"productCode": "3175", "quantityInStock": 5, "quantityReserved": 0, "soldOut": false, "expectedDeliveryDate": null},
+    {"productCode": "32732", "quantityInStock": 0, "quantityReserved": 0, "soldOut": true, "expectedDeliveryDate": null},
+    {"productCode": "23539", "quantityInStock": 3, "quantityReserved": 1, "soldOut": false, "expectedDeliveryDate": null},
+    {"productCode": "38605", "quantityInStock": 1, "quantityReserved": 0, "soldOut": false, "expectedDeliveryDate": "2026-11-01"},
+    {"productCode": "20272", "quantityInStock": 20, "quantityReserved": 5, "soldOut": false, "expectedDeliveryDate": null}
+]

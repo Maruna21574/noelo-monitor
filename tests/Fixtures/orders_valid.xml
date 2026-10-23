@@ -1,0 +1,66 @@
+<orders>
+    <order>
+        <id>3014234346</id>
+        <created>2026-09-17 12:36:11</created>
+        <status>spracováva sa</status>
+        <deliveryName>Test Zakaznik</deliveryName>
+        <email>test@example.com</email>
+        <totalPrice>44.25</totalPrice>
+        <deliveryType>Zásielkovňa - vopred - 30071</deliveryType>
+        <deliveryPrice>0.00</deliveryPrice>
+        <payed>44.25</payed>
+        <orderedItems>
+            <orderedItem>
+                <id>1108729</id>
+                <idProduct>40561</idProduct>
+                <title>Knizka pre najmensich so zvukmi</title>
+                <count>1</count>
+                <readyItems>1</readyItems>
+                <price>15.29</price>
+                <deliveryInfo>skladom</deliveryInfo>
+                <supplier>For Baby</supplier>
+            </orderedItem>
+            <orderedItem>
+                <id>1108734</id>
+                <idProduct>3175</idProduct>
+                <title>Knizka pre najmensich Severny pol</title>
+                <count>2</count>
+                <readyItems>0</readyItems>
+                <price>14.59</price>
+                <deliveryInfo>skladom</deliveryInfo>
+                <supplier>For Baby</supplier>
+            </orderedItem>
+            <orderedItem>
+                <id>1109270</id>
+                <idProduct>6826</idProduct>
+                <title>Zlava (VIP10)</title>
+                <count>1</count>
+                <price>-4.92</price>
+                <deliveryInfo/>
+                <supplier/>
+            </orderedItem>
+        </orderedItems>
+    </order>
+    <order>
+        <id>3014234334</id>
+        <created>2026-09-17 11:03:55</created>
+        <status>spracováva sa</status>
+        <deliveryName>Test Dobierka</deliveryName>
+        <email>dobierka@example.com</email>
+        <totalPrice>40.56</totalPrice>
+        <deliveryType>Kuriér - dobierka</deliveryType>
+        <deliveryPrice>4.49</deliveryPrice>
+        <payed/>
+        <orderedItems>
+            <orderedItem>
+                <id>1109191</id>
+                <idProduct>23539</idProduct>
+                <title>Moje prve voskovky 9 ks</title>
+                <count>1</count>
+                <price>19.90</price>
+                <deliveryInfo>do 7 dní</deliveryInfo>
+                <supplier>Edukid</supplier>
+            </orderedItem>
+        </orderedItems>
+    </order>
+</orders>
