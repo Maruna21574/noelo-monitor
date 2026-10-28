@@ -66,4 +66,15 @@ final class PaymentMatchRepositoryReviewTest extends DatabaseTestCase
 
         self::assertSame([], $repo->findPendingReviewForAdmin());
     }
+
+    public function testCashOnDeliveryOrderMatchIsHiddenFromPendingReview(): void
+    {
+        $this->seedOrderAndTransaction(4, 400);
+        $this->seedOrderAndTransaction(5, 500);
+        $this->pdo->exec('UPDATE orders SET is_cash_on_delivery = 1 WHERE id = 4');
+        $repo = new PaymentMatchRepository($this->pdo);
+
+        self::assertSame([5], array_map('intval', array_column($repo->findPendingReviewForAdmin(), 'order_id')));
+        self::assertSame([5], array_map('intval', array_column($repo->findPendingReview(), 'order_id')));
+    }
 }

@@ -59,7 +59,7 @@ final class PaymentMatchRepository
              FROM payment_matches pm
              JOIN fio_transactions ft ON ft.id = pm.fio_transaction_id
              JOIN orders o ON o.id = pm.order_id
-             WHERE pm.status = 'pending_review'
+             WHERE pm.status = 'pending_review' AND o.is_cash_on_delivery = 0
              ORDER BY o.created_at, pm.order_id"
         );
 
@@ -79,7 +79,7 @@ final class PaymentMatchRepository
              FROM payment_matches pm
              JOIN fio_transactions ft ON ft.id = pm.fio_transaction_id
              JOIN orders o ON o.id = pm.order_id
-             WHERE pm.status = 'pending_review'
+             WHERE pm.status = 'pending_review' AND o.is_cash_on_delivery = 0
              ORDER BY o.created_at, pm.order_id"
         );
 
