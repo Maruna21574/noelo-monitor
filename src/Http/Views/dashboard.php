@@ -256,7 +256,7 @@ $navItems = [
             <p class="empty">(žiadne)</p>
         <?php else: ?>
             <table>
-                <tr><th>Dátum objednávky</th><th>Objednávka</th><th>Suma</th><th>Dátum</th><th>Typ zhody</th><th>Akcia</th></tr>
+                <tr><th>Dátum objednávky</th><th>Objednávka</th><th>Suma</th><th>Dátum</th><th>Typ zhody</th><th>Poznámka (stav objednávky)</th><th>Akcia</th></tr>
                 <?php foreach ($pendingPayments as $payment): ?>
                     <tr>
                         <td><?= Html::e(substr((string) $payment['order_created_at'], 0, 10)) ?></td>
@@ -264,6 +264,7 @@ $navItems = [
                         <td><?= Html::e(Money::toDecimalString((int) $payment['amount_cents'])) ?> EUR</td>
                         <td><?= Html::e((string) $payment['transaction_date']) ?></td>
                         <td><?= Html::e(\Noelo\Monitor\Matching\PaymentMatchType::labelFor((string) $payment['match_type'])) ?></td>
+                        <td><?= Html::e((string) ($payment['order_status'] ?? '')) ?></td>
                         <td>
                             <form class="inline" method="post" action="?page=payment-review">
                                 <input type="hidden" name="csrf_token" value="<?= Html::e($csrfToken) ?>">

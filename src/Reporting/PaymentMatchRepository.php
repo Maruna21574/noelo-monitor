@@ -75,7 +75,7 @@ final class PaymentMatchRepository
     public function findPendingReviewForAdmin(): array
     {
         $stmt = $this->pdo->query(
-            "SELECT pm.id, pm.order_id, o.created_at AS order_created_at, pm.match_type, ft.amount_cents, ft.transaction_date
+            "SELECT pm.id, pm.order_id, o.created_at AS order_created_at, o.status AS order_status, pm.match_type, ft.amount_cents, ft.transaction_date
              FROM payment_matches pm
              JOIN fio_transactions ft ON ft.id = pm.fio_transaction_id
              JOIN orders o ON o.id = pm.order_id
