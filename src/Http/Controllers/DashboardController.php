@@ -30,6 +30,7 @@ final class DashboardController
             ->build(new \DateTimeImmutable('now'), (int) ($latestRun['id'] ?? 0));
 
         $pendingPayments = (new PaymentMatchRepository($this->pdo))->findPendingReviewForAdmin();
+        $orderNotes = (new \Noelo\Monitor\Reporting\OrderNoteRepository($this->pdo))->findAll();
         $recentReminders = (new PaymentReminderLogRepository($this->pdo))->findRecent();
         $reminderStatuses = (new PaymentReminderLogRepository($this->pdo))->statusesFor(
             array_map(static fn ($o) => $o->id, $report->paymentReminders)

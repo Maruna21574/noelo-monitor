@@ -75,6 +75,11 @@ if ($page === 'payment-review' && $method === 'POST') {
     exit;
 }
 
+if ($page === 'order-note' && $method === 'POST') {
+    (new \Noelo\Monitor\Http\Controllers\OrderNoteController($pdo))->handle($_POST, $_SESSION, $auth);
+    exit;
+}
+
 if ($page === 'dismiss-conflict' && $method === 'POST') {
     (new ConflictDismissController($pdo))->handle($_POST, $_SESSION, $auth);
     exit;

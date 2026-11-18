@@ -256,7 +256,7 @@ $navItems = [
             <p class="empty">(žiadne)</p>
         <?php else: ?>
             <table>
-                <tr><th>Dátum objednávky</th><th>Objednávka</th><th>Suma</th><th>Dátum</th><th>Typ zhody</th><th>Poznámka (stav objednávky)</th><th>Akcia</th></tr>
+                <tr><th>Dátum objednávky</th><th>Objednávka</th><th>Suma</th><th>Dátum</th><th>Typ zhody</th><th>Stav v e-shope</th><th>Poznámka tímu</th><th>Akcia</th></tr>
                 <?php foreach ($pendingPayments as $payment): ?>
                     <tr>
                         <td><?= Html::e(substr((string) $payment['order_created_at'], 0, 10)) ?></td>
@@ -265,6 +265,19 @@ $navItems = [
                         <td><?= Html::e((string) $payment['transaction_date']) ?></td>
                         <td><?= Html::e(\Noelo\Monitor\Matching\PaymentMatchType::labelFor((string) $payment['match_type'])) ?></td>
                         <td><?= Html::e((string) ($payment['order_status'] ?? '')) ?></td>
+                        <?php $noteRow = $orderNotes[(int) $payment['order_id']] ?? null; ?>
+                        <td>
+                            <form class="inline" method="post" action="?page=order-note">
+                                <input type="hidden" name="csrf_token" value="<?= Html::e($csrfToken) ?>">
+                                <input type="hidden" name="order_id" value="<?= Html::e((string) $payment['order_id']) ?>">
+                                <input type="text" name="note" maxlength="500" size="28" placeholder="napr. čakáme na zákazníka"
+                                       value="<?= Html::e($noteRow['note'] ?? '') ?>">
+                                <button type="submit" class="btn-confirm">Uložiť</button>
+                            </form>
+                            <?php if ($noteRow !== null): ?>
+                                <div class="section-desc"><?= Html::e($noteRow['updated_by']) ?>, <?= Html::e(substr($noteRow['updated_at'], 0, 16)) ?></div>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <form class="inline" method="post" action="?page=payment-review">
                                 <input type="hidden" name="csrf_token" value="<?= Html::e($csrfToken) ?>">
