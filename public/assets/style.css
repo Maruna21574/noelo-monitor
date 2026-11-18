@@ -326,3 +326,21 @@ body.login-page {
     text-align: left;
 }
 .footer { margin-top: 24px; color: var(--muted-light); font-size: 11px; }
+
+/* --- Poznamka timu pri platbach na overenie --- */
+form.note-form { display: flex; gap: 6px; align-items: center; min-width: 260px; }
+form.note-form input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+}
+form.note-form input[type="text"]:focus { outline: none; border-color: var(--teal); }
+form.note-form input[type="text"]::placeholder { color: var(--muted-light); }
+form.note-form button { flex: none; }
+.note-meta { color: var(--muted); font-size: 11px; margin-top: 4px; }
