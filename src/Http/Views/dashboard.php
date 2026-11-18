@@ -267,15 +267,15 @@ $navItems = [
                         <td><?= Html::e((string) ($payment['order_status'] ?? '')) ?></td>
                         <?php $noteRow = $orderNotes[(int) $payment['order_id']] ?? null; ?>
                         <td>
-                            <form class="inline" method="post" action="?page=order-note">
+                            <form class="note-form" method="post" action="?page=order-note">
                                 <input type="hidden" name="csrf_token" value="<?= Html::e($csrfToken) ?>">
                                 <input type="hidden" name="order_id" value="<?= Html::e((string) $payment['order_id']) ?>">
-                                <input type="text" name="note" maxlength="500" size="28" placeholder="napr. čakáme na zákazníka"
+                                <input type="text" name="note" maxlength="500" placeholder="napr. čakáme na zákazníka"
                                        value="<?= Html::e($noteRow['note'] ?? '') ?>">
                                 <button type="submit" class="btn-confirm">Uložiť</button>
                             </form>
                             <?php if ($noteRow !== null): ?>
-                                <div class="section-desc"><?= Html::e($noteRow['updated_by']) ?>, <?= Html::e(substr($noteRow['updated_at'], 0, 16)) ?></div>
+                                <div class="note-meta"><?= Html::e($noteRow['updated_by']) ?>, <?= Html::e(substr($noteRow['updated_at'], 0, 16)) ?></div>
                             <?php endif; ?>
                         </td>
                         <td>
