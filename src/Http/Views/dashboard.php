@@ -43,7 +43,7 @@ $navItems = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Dashboard – Noelo Monitor</title>
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/style.css?v=<?= (int) @filemtime(__DIR__ . '/../../../public/assets/style.css') ?>">
 </head>
 <body>
 <nav class="topbar">
